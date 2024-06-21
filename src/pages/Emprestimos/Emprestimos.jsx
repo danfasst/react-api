@@ -1,12 +1,12 @@
 import "./Emprestimo.css";
 import axios from 'axios';
-import { useState, useEffect, useInsertionEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 
 function Emprestimos() {
+
     const [emprestimos, setEmprestimos] = useState([]);
-    const [usuarios, setUsuarios] = useState([]);
-    const [livros, setLivros] = useState([]);
+    const [emprestimo, setEmprestimo] = useState(null);
 
     function getEmprestimos() {
         axios.get("http://localhost:5073/emprestimos").then((resposta) => {
@@ -14,17 +14,7 @@ function Emprestimos() {
         });
     }
 
-    function getUsuarios() {
-        axios.get("http://localhost:5073/usuarios").then((resposta) => {
-            setUsuarios(resposta.data);
-        });
-    }
-
-    function getLivros() {
-        axios.get("http://localhost:5073/livros").then((resposta) => {
-            setLivros(resposta.data)
-        });
-    }
+    useEffect(getEmprestimos, []);
 
     function excluirEmprestimo(id) {
         axios.delete("http://localhost:5073/emprestimos/" + id)
@@ -33,50 +23,97 @@ function Emprestimos() {
             });
     }
 
-    useEffect(getEmprestimos, []);
-    useEffect(getUsuarios, []);
-    useEffect(getLivros, []);
+    function editarEmprestimo(emprestimo) {
+        setEmprestimo(emprestimo);
+    }
 
-    return (
-        <>
-            <h1>Emprestimos</h1>
+    function novoEmprestimo() {
+        setEmprestimo({
+            dataEmprestimo: "",
+            dataDevolucao: "",
+            livro: ""
+        });
+    }
+
+    function cancelar() {
+        setEmprestimo(null);
+    }
+
+    function refresh() {
+        cancelar();
+        getEmprestimos();
+    }
+
+    function getConteudo() {
+        if (emprestimo == null) {
+            return (
+                <>
+                    <button onClick={() => { novoEmprestimo(); }}> Novo Emprestimo </button>
+                    {getTabela()}
+                </>
+            );
+        } else {
+            return getFormulario();
+        }
+    }
+
+    function salvarEmprestimo() {
+        if (emprestimo.id) {
+            axios.put("http://localhost:5073/emprestimos/" + emprestimo.id, emprestimo).then(() => { refresh(); });
+        } else {
+            axios.post("http://localhost:5073/emprestimos", emprestimo).then(() => { refresh(); });
+        }
+    }
+
+    function onChangeEmprestimo(campo, valor, id) {
+        emprestimo[campo] = valor;
+        setEmprestimo({
+            ...emprestimo,
+        });
+    }
+
+    function getFormulario() {
+        return <>
             <form action="">
-                <input placeholder="Livro" type="text" id="livro" />
                 <br />
-                <input placeholder="Usuario" type="text" id="usuario" />
+                <input placeholder="Livro" type="text" id="livro" name="livro" value={emprestimo.livro}
+                    onChange={(e) => { onChangeEmprestimo(e.target.name, e.target.value, emprestimo.id) }} />
                 <br />
-                <input placeholder="Data Emprestimo" type="text" id="dataEmprestimo" />
+                <input placeholder="Data Emprestimo" type="text" id="dataEmprestimo" name="dataEmprestimo" value={emprestimo.dataEmprestimo}
+                    onChange={(e) => { onChangeEmprestimo(e.target.name, e.target.value, emprestimo.id) }} />
                 <br />
-                <input placeholder="Data de Devolucao" type="text" id="dataDevolucao" />
+                <input placeholder="Data de Devolucao" type="text" id="dataDevolucao" name="dataDevolucao" value={emprestimo.dataDevolucao}
+                    onChange={(e) => { onChangeEmprestimo(e.target.name, e.target.value, emprestimo.id) }} />
 
-                <button type="submit">Fazer Empréstimo</button>
+                <button onClick={() => { salvarEmprestimo(); }}>Salvar</button>
+                <button onClick={() => { cancelar(); }}>Cancelar</button>
             </form>
-            {getTabela()}
         </>
-    );
+    }
 
-    function getLinha(id, livros, usuario, dataEmprestimo, dataDevolucao) {
+    function getLinha(emprestimo) {
         return (
-            <tr key={id}>
-                <td>{id}</td>
-                <td>{livros}</td>
-                <td>{usuario}</td>
-                <td>{dataEmprestimo}</td>
-                <td>{dataDevolucao}</td>
+            <tr>
+                <td>{emprestimo.id}</td>
+                <td>{emprestimo.dataEmprestimo}</td>
+                <td>{emprestimo.dataDevolucao}</td>
+                <td>{emprestimo.livro}</td>
                 <td>
-                    <button onClick={() => excluirEmprestimo(id)}>Excluir</button>
-                    <button>Editar</button>
+                    <button onClick={() => { excluirEmprestimo(emprestimo.id) }}>Excluir</button>
+                    <button onClick={() => { editarEmprestimo(emprestimo) }}>Editar</button>
                 </td>
             </tr>
         );
     }
 
     function getLinhas() {
-        return emprestimos.map((emprestimo) => {
-            const usuario = usuarios.find((usuario) => usuario.id > 0);
-            const livro = livros.find((livro) => livro.nome);
-            return getLinha(emprestimo.id, livro.nome, usuario.id, emprestimo.dataEmprestimo, emprestimo.dataDevolucao);
-        });
+        const linhasDaTabela = [];
+        for (let i = 0; i < emprestimos.length; i++) {
+            const emprestimo = emprestimos[i];
+            linhasDaTabela[i] = getLinha(emprestimo);
+        }
+        return linhasDaTabela;
+
     }
 
     function getTabela() {
@@ -85,10 +122,9 @@ function Emprestimos() {
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Livro</th>
-                        <th>Usuario</th>
                         <th>Data de Emprestimo</th>
                         <th>Data de Devolucao</th>
+                        <th>Livro</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
@@ -98,6 +134,13 @@ function Emprestimos() {
             </table>
         );
     }
+
+    return (
+        <>
+            <h1>Emprestimos</h1>
+            {getConteudo()}
+        </>
+    );
 }
 
 export default Emprestimos;

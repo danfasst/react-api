@@ -13,14 +13,14 @@ form {
         padding: 10px;
     }
 
-    & button {
-        margin-top: 15px;
-        height: 40px;
-        width: 150px;
-        color: #ffff;
-        background-color: #8300bfdd;
     }
-}
+        button {
+            margin-top: 15px;
+            height: 40px;
+            width: 150px;
+            color: #ffff;
+            background-color: #8300bfdd;
+        }
 
 table,
 tbody,
